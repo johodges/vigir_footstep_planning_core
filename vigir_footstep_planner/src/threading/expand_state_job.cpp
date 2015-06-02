@@ -1,5 +1,8 @@
 #include <vigir_footstep_planner/threading/expand_state_job.h>
 
+#include <vigir_footstep_planner/robot_model/robot_model.h>
+#include <vigir_footstep_planner/world_model/world_model.h>
+
 namespace vigir_footstep_planning
 {
 namespace threading
@@ -25,6 +28,9 @@ void ExpandStateJob::run()
   successful = false;
 
   /// TODO: backward search case
+  if (state.getPredState() == nullptr)
+    return;
+
   next.reset(new PlanningState(footstep.performMeOnThisState(state)));
   State& next_state = next->getState();
 
@@ -32,7 +38,9 @@ void ExpandStateJob::run()
     return;
 
   // check reachability due to discretization
-  if (!state_space.reachable(state.getState(), next_state))
+  const State& left_foot = state.getLeg() == LEFT ? state.getState() : state.getPredState()->getState();
+  const State& right_foot = state.getLeg() == RIGHT ? state.getState() : state.getPredState()->getState();
+  if (!RobotModel::isReachable(left_foot, right_foot, next_state))
     return;
 
   // lookup costs
